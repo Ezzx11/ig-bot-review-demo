@@ -98,9 +98,11 @@
   const APP_ID = "1401228048836826";
   // This MUST be your Cloudflare Worker URL, not this page's own URL,
   // because Instagram sends the "code" here first for the secure token exchange.
-  const WORKER_REDIRECT_URI = "https://ig-oauth-exchange.ezzx11.workers.dev";
+  const WORKER_REDIRECT_URI = "https://ig-oauth-exchange.ezzx11.workers.dev/";
   const SCOPES = "instagram_business_basic,instagram_business_manage_messages";
   // ------------------------
+  // state guards against CSRF. Instagram echoes it back on redirect.
+  const OAUTH_STATE = "ig-demo-connect";
 
   const connectBtn = document.getElementById("connectBtn");
   const resultBox = document.getElementById("resultBox");
@@ -117,10 +119,12 @@
 
   connectBtn.addEventListener("click", () => {
     const authUrl = `https://www.instagram.com/oauth/authorize` +
-      `?client_id=${APP_ID}` +
+      `?enable_fb_login=0` +
+      `&client_id=${APP_ID}` +
       `&redirect_uri=${encodeURIComponent(WORKER_REDIRECT_URI)}` +
       `&response_type=code` +
-      `&scope=${encodeURIComponent(SCOPES)}`;
+      `&scope=${encodeURIComponent(SCOPES)}` +
+      `&state=${OAUTH_STATE}`;
     window.location.href = authUrl;
   });
 
