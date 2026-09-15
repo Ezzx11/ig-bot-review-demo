@@ -42,17 +42,8 @@
     justify-content: center;
     font-size: 30px;
   }
-  h1 {
-    font-size: 20px;
-    color: var(--ink);
-    margin: 0 0 6px;
-  }
-  p.sub {
-    color: var(--muted);
-    font-size: 14px;
-    line-height: 1.5;
-    margin: 0 0 28px;
-  }
+  h1 { font-size: 20px; color: var(--ink); margin: 0 0 6px; }
+  p.sub { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0 0 28px; }
   button#connectBtn {
     width: 100%;
     padding: 14px 18px;
@@ -65,58 +56,16 @@
     cursor: pointer;
   }
   button#connectBtn:hover { opacity: 0.92; }
-
-  .result {
-    display: none;
-    margin-top: 24px;
-    padding: 20px;
-    border-radius: 16px;
-    background: #f6f7fb;
-    text-align: left;
-  }
+  .result { display: none; margin-top: 24px; padding: 20px; border-radius: 16px; background: #f6f7fb; text-align: left; }
   .result.show { display: block; }
-  .profile-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .profile-row img {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #e5e7eb;
-  }
-  .profile-row .name {
-    font-weight: 600;
-    color: var(--ink);
-    font-size: 15px;
-  }
-  .profile-row .id {
-    color: var(--muted);
-    font-size: 12px;
-  }
-  .status {
-    margin-top: 16px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-  .error {
-    margin-top: 16px;
-    font-size: 13px;
-    color: #b91c1c;
-    background: #fef2f2;
-    padding: 12px 14px;
-    border-radius: 10px;
-    display: none;
-  }
+  .profile-row { display: flex; align-items: center; gap: 14px; }
+  .profile-row img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: #e5e7eb; }
+  .profile-row .name { font-weight: 600; color: var(--ink); font-size: 15px; }
+  .profile-row .id { color: var(--muted); font-size: 12px; }
+  .status { margin-top: 16px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .error { margin-top: 16px; font-size: 13px; color: #b91c1c; background: #fef2f2; padding: 12px 14px; border-radius: 10px; display: none; }
   .error.show { display: block; }
-  .footnote {
-    margin-top: 22px;
-    font-size: 11px;
-    color: #9ca3af;
-  }
+  .footnote { margin-top: 22px; font-size: 11px; color: #9ca3af; }
 </style>
 </head>
 <body>
@@ -147,9 +96,10 @@
 <script>
   // ---- CONFIGURATION ----
   const APP_ID = "913670561429164";
-  const REDIRECT_URI = window.location.origin + window.location.pathname; // must exactly match a Valid OAuth Redirect URI in the app dashboard
-  const SCOPES = "instagram_business_basic,instagram_business_manage_messages,pages_show_list,pages_read_engagement";
-  const GRAPH_VERSION = "v26.0";
+  // This MUST be your Cloudflare Worker URL, not this page's own URL,
+  // because Instagram sends the "code" here first for the secure token exchange.
+  const WORKER_REDIRECT_URI = "https://ig-oauth-exchange.ezzx11.workers.dev";
+  const SCOPES = "instagram_business_basic,instagram_business_manage_messages";
   // ------------------------
 
   const connectBtn = document.getElementById("connectBtn");
@@ -166,80 +116,47 @@
   }
 
   connectBtn.addEventListener("click", () => {
-    const authUrl = `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth` +
+    const authUrl = `https://www.instagram.com/oauth/authorize` +
       `?client_id=${APP_ID}` +
-      `&display=page` +
-      `&extras=${encodeURIComponent(JSON.stringify({ setup: { channel: "IG_API_ONBOARDING" } }))}` +
-      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-      `&response_type=token` +
+      `&redirect_uri=${encodeURIComponent(WORKER_REDIRECT_URI)}` +
+      `&response_type=code` +
       `&scope=${encodeURIComponent(SCOPES)}`;
     window.location.href = authUrl;
   });
 
-  async function handleRedirect() {
-    const hash = window.location.hash;
-    if (!hash || !hash.includes("access_token")) return;
+  async function handleReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get("access_token");
+    const oauthError = params.get("error");
 
-    const params = new URLSearchParams(hash.substring(1));
-    const userAccessToken = params.get("access_token");
-    if (!userAccessToken) return;
+    if (oauthError) {
+      showError(oauthError);
+      return;
+    }
+    if (!accessToken) return;
 
     connectBtn.style.display = "none";
     resultBox.classList.add("show");
-    statusText.textContent = "Looking up connected Pages…";
+    statusText.textContent = "Fetching Instagram profile info…";
 
     try {
-      // Step 1: find the Facebook Pages this user manages
-      const pagesRes = await fetch(
-        `https://graph.facebook.com/${GRAPH_VERSION}/me/accounts?access_token=${userAccessToken}`
+      const res = await fetch(
+        `https://graph.instagram.com/v26.0/me?fields=user_id,username,profile_picture_url&access_token=${accessToken}`
       );
-      const pagesData = await pagesRes.json();
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
 
-      if (pagesData.error) throw new Error(pagesData.error.message);
-      if (!pagesData.data || pagesData.data.length === 0) {
-        throw new Error("No Facebook Pages found for this account.");
-      }
-
-      // Step 2: find the first Page with a linked Instagram professional account
-      let igAccount = null;
-      let pageAccessToken = null;
-
-      for (const page of pagesData.data) {
-        const pageDetailRes = await fetch(
-          `https://graph.facebook.com/${GRAPH_VERSION}/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
-        );
-        const pageDetail = await pageDetailRes.json();
-        if (pageDetail.instagram_business_account) {
-          igAccount = pageDetail.instagram_business_account;
-          pageAccessToken = page.access_token;
-          break;
-        }
-      }
-
-      if (!igAccount) {
-        throw new Error("No Instagram professional account is linked to any of your Pages.");
-      }
-
-      // Step 3: fetch the Instagram professional profile info
-      statusText.textContent = "Fetching Instagram profile info…";
-      const igRes = await fetch(
-        `https://graph.facebook.com/${GRAPH_VERSION}/${igAccount.id}?fields=username,profile_picture_url&access_token=${pageAccessToken}`
-      );
-      const igData = await igRes.json();
-      if (igData.error) throw new Error(igData.error.message);
-
-      profilePic.src = igData.profile_picture_url || "";
-      profileName.textContent = "@" + (igData.username || "unknown");
-      profileId.textContent = "Instagram Business Account ID: " + igData.id;
+      profilePic.src = data.profile_picture_url || "";
+      profileName.textContent = "@" + (data.username || "unknown");
+      profileId.textContent = "Instagram User ID: " + data.user_id;
       statusText.textContent = "Connected successfully. This account is now authorized to receive automated replies from the bot.";
-
     } catch (err) {
       statusText.textContent = "";
-      showError("Connection failed: " + err.message);
+      showError("Failed to fetch profile: " + err.message);
     }
   }
 
-  handleRedirect();
+  handleReturn();
 </script>
 
 </body>
