@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Customer Service Bot — Connect Instagram</title>
+<style>
+  :root {
+    --purple: #6d28d9;
+    --blue: #2563eb;
+    --ink: #1f2430;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(160deg, var(--purple), var(--blue));
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 24px;
+    max-width: 440px;
+    width: 100%;
+    padding: 36px 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    text-align: center;
+  }
+  .badge {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: linear-gradient(160deg, var(--purple), var(--blue));
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+  }
+  h1 {
+    font-size: 20px;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  p.sub {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 28px;
+  }
+  button#connectBtn {
+    width: 100%;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(160deg, var(--purple), var(--blue));
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button#connectBtn:hover { opacity: 0.92; }
+
+  .result {
+    display: none;
+    margin-top: 24px;
+    padding: 20px;
+    border-radius: 16px;
+    background: #f6f7fb;
+    text-align: left;
+  }
+  .result.show { display: block; }
+  .profile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .profile-row img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #e5e7eb;
+  }
+  .profile-row .name {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 15px;
+  }
+  .profile-row .id {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .status {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .error {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #b91c1c;
+    background: #fef2f2;
+    padding: 12px 14px;
+    border-radius: 10px;
+    display: none;
+  }
+  .error.show { display: block; }
+  .footnote {
+    margin-top: 22px;
+    font-size: 11px;
+    color: #9ca3af;
+  }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="badge">💬</div>
+    <h1>AI Customer Service Bot</h1>
+    <p class="sub">Connect your Instagram professional account to let the bot read and reply to your Direct Messages automatically.</p>
+
+    <button id="connectBtn">Connect Instagram Account</button>
+
+    <div class="error" id="errorBox"></div>
+
+    <div class="result" id="resultBox">
+      <div class="profile-row">
+        <img id="profilePic" src="" alt="Profile picture" />
+        <div>
+          <div class="name" id="profileName">—</div>
+          <div class="id" id="profileId">—</div>
+        </div>
+      </div>
+      <div class="status" id="statusText">Fetching connected account…</div>
+    </div>
+
+    <div class="footnote">This demo page is used for Meta App Review verification of instagram_business_basic and instagram_business_manage_messages.</div>
+  </div>
+
+<script>
+  // ---- CONFIGURATION ----
+  const APP_ID = "913670561429164";
+  const REDIRECT_URI = window.location.origin + window.location.pathname; // must exactly match a Valid OAuth Redirect URI in the app dashboard
+  const SCOPES = "instagram_business_basic,instagram_business_manage_messages,pages_show_list,pages_read_engagement";
+  const GRAPH_VERSION = "v26.0";
+  // ------------------------
+
+  const connectBtn = document.getElementById("connectBtn");
+  const resultBox = document.getElementById("resultBox");
+  const errorBox = document.getElementById("errorBox");
+  const statusText = document.getElementById("statusText");
+  const profilePic = document.getElementById("profilePic");
+  const profileName = document.getElementById("profileName");
+  const profileId = document.getElementById("profileId");
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.add("show");
+  }
+
+  connectBtn.addEventListener("click", () => {
+    const authUrl = `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth` +
+      `?client_id=${APP_ID}` +
+      `&display=page` +
+      `&extras=${encodeURIComponent(JSON.stringify({ setup: { channel: "IG_API_ONBOARDING" } }))}` +
+      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+      `&response_type=token` +
+      `&scope=${encodeURIComponent(SCOPES)}`;
+    window.location.href = authUrl;
+  });
+
+  async function handleRedirect() {
+    const hash = window.location.hash;
+    if (!hash || !hash.includes("access_token")) return;
+
+    const params = new URLSearchParams(hash.substring(1));
+    const userAccessToken = params.get("access_token");
+    if (!userAccessToken) return;
+
+    connectBtn.style.display = "none";
+    resultBox.classList.add("show");
+    statusText.textContent = "Looking up connected Pages…";
+
+    try {
+      // Step 1: find the Facebook Pages this user manages
+      const pagesRes = await fetch(
+        `https://graph.facebook.com/${GRAPH_VERSION}/me/accounts?access_token=${userAccessToken}`
+      );
+      const pagesData = await pagesRes.json();
+
+      if (pagesData.error) throw new Error(pagesData.error.message);
+      if (!pagesData.data || pagesData.data.length === 0) {
+        throw new Error("No Facebook Pages found for this account.");
+      }
+
+      // Step 2: find the first Page with a linked Instagram professional account
+      let igAccount = null;
+      let pageAccessToken = null;
+
+      for (const page of pagesData.data) {
+        const pageDetailRes = await fetch(
+          `https://graph.facebook.com/${GRAPH_VERSION}/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
+        );
+        const pageDetail = await pageDetailRes.json();
+        if (pageDetail.instagram_business_account) {
+          igAccount = pageDetail.instagram_business_account;
+          pageAccessToken = page.access_token;
+          break;
+        }
+      }
+
+      if (!igAccount) {
+        throw new Error("No Instagram professional account is linked to any of your Pages.");
+      }
+
+      // Step 3: fetch the Instagram professional profile info
+      statusText.textContent = "Fetching Instagram profile info…";
+      const igRes = await fetch(
+        `https://graph.facebook.com/${GRAPH_VERSION}/${igAccount.id}?fields=username,profile_picture_url&access_token=${pageAccessToken}`
+      );
+      const igData = await igRes.json();
+      if (igData.error) throw new Error(igData.error.message);
+
+      profilePic.src = igData.profile_picture_url || "";
+      profileName.textContent = "@" + (igData.username || "unknown");
+      profileId.textContent = "Instagram Business Account ID: " + igData.id;
+      statusText.textContent = "Connected successfully. This account is now authorized to receive automated replies from the bot.";
+
+    } catch (err) {
+      statusText.textContent = "";
+      showError("Connection failed: " + err.message);
+    }
+  }
+
+  handleRedirect();
+</script>
+
+</body>
+</html>
