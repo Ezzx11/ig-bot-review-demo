@@ -39,15 +39,21 @@ Meta requires you to describe how a human is in the loop / can take over.
 
 ## 3. Testing instructions (paste into the review form)
 
+> **Designated test account (already verified working):**
+> - Instagram username: **@bot22.27**
+> - Instagram User ID: **17841424224641666**
+> - Account type: professional (Business/Creator), enrolled as Instagram Tester.
+> - This is the account used in the review video; the reviewer may reuse these credentials/this account or connect their own tester account.
+
 > **Step 1 — Add reviewer access** (requires app "Roles" access before review):
-> 1. App Dashboard → App Roles → Roles → **Instagram Testers** → add the reviewer's Instagram/Facebook identity.
+> 1. App Dashboard → App Roles → Roles → **Instagram Testers** → confirm **@bot22.27** is enrolled, and add the reviewer's Instagram/Facebook identity.
 > 2. Reviewer must accept the test invite when prompted.
 
 > **Step 2 — Run the demo:**
 > 1. Open https://ezzx11.github.io/ig-bot-review-demo/ in a browser.
 > 2. Click **Connect Instagram Account**.
-> 3. Log in with the test Instagram **professional (Business/Creator) account** and click **Allow**.
-> 4. The page reloads and shows the connected profile card with the Instagram @username and User ID — proving `instagram_business_basic`.
+> 3. Log in with **@bot22.27** (or the reviewer's own tester professional account) and click **Allow**.
+> 4. The page reloads and shows the connected profile card — `@bot22.27`, Instagram User ID `17841424224641666` — proving `instagram_business_basic`.
 > 5. (For `instagram_business_manage_messages`) From that same account, send an Instagram Direct Message to a second Instagram account enrolled in the tester role; the appended inbox panel in the demo shows the incoming message and the bot's auto-reply — proving message send/receive.
 
 ---
@@ -91,7 +97,7 @@ Both callbacks are implemented on the Worker and verified with Meta's signed req
 - [ ] Add the reviewer as an **Instagram Tester** (App Roles → Roles) and they accept.
 - [ ] Deauthorize + Data deletion URLs set (values above).
 - [ ] Privacy policy URL set (Notion link) in Basic Settings and page live.
-- [ ] Business account used for testing is a **professional (Business/Creator)** account enrolled as tester.
+- [ ] Business account used for testing (**@bot22.27**, ID `17841424224641666`) is a **professional (Business/Creator)** account enrolled as tester.
 - [ ] Video + testing instructions + Human Agent description pasted.
 - [ ] Complete **Business Verification** if the dashboard prompts for it before Advanced Access.
 - [ ] After approval: App Dashboard → toggle the app from **Development → Live**.
